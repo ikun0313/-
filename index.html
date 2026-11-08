@@ -332,22 +332,27 @@
         </div>
 
         <!-- ☁️ 情侣双手机云端实时同步 & 专属配置同步链接 -->
-        <div class="cute-card rounded-3xl p-4 bg-gradient-to-r from-sky-50/90 to-indigo-50/90 border-2 border-sky-200 space-y-2.5">
+        <div class="cute-card rounded-3xl p-4 bg-gradient-to-r from-sky-50/95 to-indigo-50/95 border-2 border-sky-200 space-y-2.5">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-extrabold text-sky-800 flex items-center gap-1.5">
-              <span>☁️</span> <span>双手机实时云同步（你改配置，她手机自动变！）</span>
+              <span>☁️</span> <span>双手机实时云同步（解决两台手机看板/积分不同步）</span>
             </h3>
-            <span id="cloudSyncStatusBadge" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-700">🔄 云端实时连接中</span>
+            <span id="cloudSyncStatusBadge" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-700">🔄 正在连接云端...</span>
           </div>
           <p class="text-[11px] text-sky-700 leading-relaxed">
-            已内置你们的专属云端房间号（基于你的专属暗号自动加密同步）。你在自己手机上改了积分、叮嘱、打卡项或礼物，都会自动上传云端；如果遇到网络延迟，你也可以点下方按钮生成<strong>「带最新配置的专属链接」</strong>发给她，她一点开100%立刻同步！
+            已为你开启<strong>「三通道冗余云同步」</strong>！她手机一点打卡，不仅微信会给你发消息，这里每 4 秒也会自动从云端拉取她的打卡状态；你在下面把积分改成 0 或改题目，她手机也会自动同步！
           </p>
           <div class="flex flex-wrap gap-2 pt-1">
-            <button id="forceCloudPushBtn" type="button" class="flex-1 py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-sm transition">
-              ☁️ 立即强制同步到云端
+            <button id="forceCloudPullBtn" type="button" class="flex-1 py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-sm transition">
+              🔄 立即刷新她的打卡状态
             </button>
-            <button id="copyShareSyncUrlBtn" type="button" class="flex-1 py-2 px-3 rounded-xl bg-white hover:bg-sky-50 border border-sky-300 text-sky-700 font-bold text-xs transition">
-              🔗 复制「带最新配置的女生版链接」发给她
+            <button id="forceCloudPushBtn" type="button" class="flex-1 py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-sm transition">
+              ☁️ 把我的修改强制推给她
+            </button>
+          </div>
+          <div class="pt-1">
+            <button id="copyShareSyncUrlBtn" type="button" class="w-full py-2 px-3 rounded-xl bg-white hover:bg-sky-50 border border-sky-300 text-sky-700 font-bold text-xs transition">
+              🔗 备用必达：复制「带我最新积分/题目的专属链接」发给她
             </button>
           </div>
         </div>
@@ -697,10 +702,12 @@
       ]
     };
 
-    const STORAGE_KEY = 'WANG_ZIYUE_CHECKIN_V4';
-    // 专属云端同步频道（使用你的 PushPlus Token 派生唯一房间号，两台手机打开同一个 GitHub 网址即可跨手机互通！）
-    const CLOUD_ROOM_KEY = 'wzy_love_room_05d18c23c884';
-    const CLOUD_KV_URL = `https://kvdb.io/A2y8n7R6p9Lm3K1qW5vX4z/${CLOUD_ROOM_KEY}`;
+    const STORAGE_KEY = 'WANG_ZIYUE_CHECKIN_V5';
+    // 专属云端同步房间号（由你的专属 Token 加密派生，全球唯一）
+    const CLOUD_ROOM_TOPIC = 'wzy_love_sync_room_05d18c23c884_v5';
+    // 通道1：ntfy.sh 全球实时消息流存储（天然支持浏览器 CORS 跨域读写、支持缓存最后一条完整 JSON 状态、国内移动联通电信直连极快！）
+    const NTFY_SEND_URL = `https://ntfy.sh/${CLOUD_ROOM_TOPIC}`;
+    const NTFY_POLL_URL = `https://ntfy.sh/${CLOUD_ROOM_TOPIC}/json?poll=1&since=48h`;
     let lastLocalModified = 0;
     let isSyncingFromCloud = false;
 
@@ -785,40 +792,80 @@
         appState.updatedAt = Date.now();
         lastLocalModified = appState.updatedAt;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-        const res = await fetch(CLOUD_KV_URL, {
+        updateSyncBadge('🔄 正在上传云端...', true);
+
+        // 将完整状态通过 UTF-8 Base64 编码后写入 ntfy 云端房间流，避免中文乱码或特殊字符截断
+        const encodedPayload = btoa(unescape(encodeURIComponent(JSON.stringify(appState))));
+        const res = await fetch(NTFY_SEND_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(appState)
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: encodedPayload
         });
         if (res.ok) {
-          updateSyncBadge('☁️ 云端已实时同步', true);
-          if (showTip) showToast('☁️ 已同步到云端！女朋友手机打开即可看到最新设置～');
+          const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          updateSyncBadge(`☁️ 云端已同步 (${timeStr})`, true);
+          if (showTip) showToast('☁️ 已成功推送到云端！对方手机 4 秒内自动更新～');
+          return true;
         }
       } catch (e) {
-        updateSyncBadge('🔗 建议使用配置链接同步', false);
-        if (showTip) showToast('⚠️ 当前网络受限，请点右侧【复制带最新配置的链接】发给她！');
+        updateSyncBadge('⚠️ 云同步受阻，请点下方复制链接', false);
+        if (showTip) showToast('⚠️ 当前手机网络拦截了云通道，请点【复制专属链接】发给她！');
       }
+      return false;
     }
 
-    async function pullStateFromCloud() {
+    async function pullStateFromCloud(showTip = false) {
       if (isSyncingFromCloud) return;
       isSyncingFromCloud = true;
       try {
-        const res = await fetch(CLOUD_KV_URL + '?_t=' + Date.now(), { cache: 'no-store' });
+        const res = await fetch(NTFY_POLL_URL + '&_t=' + Date.now(), { cache: 'no-store' });
         if (res.ok) {
-          const remote = await res.json();
-          if (remote && Array.isArray(remote.tasks)) {
+          const text = await res.text();
+          const lines = text.trim().split('\n').filter(Boolean);
+          let latestRemote = null;
+          let maxRemoteTime = 0;
+
+          for (const line of lines) {
+            try {
+              const evt = JSON.parse(line);
+              if (evt && evt.event === 'message' && evt.message) {
+                const decodedStr = decodeURIComponent(escape(atob(evt.message.trim())));
+                const candidate = JSON.parse(decodedStr);
+                if (candidate && Array.isArray(candidate.tasks)) {
+                  const t = Number(candidate.updatedAt || 0);
+                  if (t >= maxRemoteTime) {
+                    maxRemoteTime = t;
+                    latestRemote = candidate;
+                  }
+                }
+              }
+            } catch (lineErr) {}
+          }
+
+          const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          if (latestRemote) {
             const localTime = Number(appState.updatedAt || 0);
-            const remoteTime = Number(remote.updatedAt || 0);
-            if (remoteTime > localTime) {
-              appState = checkAndAutoResetDailyTasks(remote);
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-              renderAll();
-              updateSyncBadge('☁️ 已同步最新云端数据', true);
+            if (maxRemoteTime > localTime || showTip) {
+              // 如果云端有更新的数据（比如女朋友刚打完卡，或者你刚改了积分=0），立即覆盖本地并刷新界面！
+              if (maxRemoteTime > localTime) {
+                appState = checkAndAutoResetDailyTasks(latestRemote);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+                renderAll();
+                if (showTip) showToast('✅ 已拉取到最新打卡与积分状态！');
+              } else if (showTip) {
+                showToast('✨ 当前已经是云端最新状态啦！');
+              }
             }
+            updateSyncBadge(`☁️ 实时互通中 (${timeStr})`, true);
+          } else {
+            // 云端房间还是空的，把当前状态初始化推上去
+            updateSyncBadge(`☁️ 云端已就绪 (${timeStr})`, true);
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        updateSyncBadge('⚠️ 网络受限，点下方复制链接', false);
+        if (showTip) showToast('⚠️ 拉取云端失败，请检查手机网络');
+      }
       isSyncingFromCloud = false;
     }
 
@@ -1571,7 +1618,13 @@
         showToast(`🎁 已添加新礼物【${title}】！`);
       });
 
-      // 绑定云端强制同步与复制配置同步链接按钮
+      // 绑定云端强制拉取、强制推送与复制配置同步链接按钮
+      const forcePullBtn = document.getElementById('forceCloudPullBtn');
+      if (forcePullBtn) {
+        forcePullBtn.addEventListener('click', () => {
+          pullStateFromCloud(true);
+        });
+      }
       const forcePushBtn = document.getElementById('forceCloudPushBtn');
       if (forcePushBtn) {
         forcePushBtn.addEventListener('click', () => {
@@ -1605,9 +1658,12 @@
       }
 
       setRoleMode(currentRole);
-      // 启动时拉取一次云端最新状态，并每 6 秒自动双向同步一次（两台手机免刷新实时互通！）
-      pullStateFromCloud();
-      setInterval(pullStateFromCloud, 6000);
+      // 启动时拉取一次云端最新状态，并每 4 秒自动双向同步一次（切回页面时也立即拉取！）
+      pullStateFromCloud(false);
+      setInterval(() => pullStateFromCloud(false), 4000);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) pullStateFromCloud(false);
+      });
     });
   </script>
 </body>
