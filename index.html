@@ -220,6 +220,24 @@
         <div class="w-full h-3 bg-pink-100 rounded-full overflow-hidden p-0.5">
           <div id="progressBarFill" class="h-full bg-gradient-to-r from-pink-400 via-rose-400 to-pink-500 rounded-full transition-all duration-500" style="width: 0%"></div>
         </div>
+
+        <!-- 🍾 新增：情侣双色时光消息瓶独立入口按键（点开进入独立 UI 界面） -->
+        <div class="mt-3 pt-3 border-t border-pink-100/80 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-xl animate-bounce">🍾</span>
+            <div class="truncate">
+              <div class="text-xs font-extrabold text-pink-700 flex items-center gap-1">
+                <span>情侣双色时光消息瓶</span>
+                <span id="bottleEntryStatusTag" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">可投递</span>
+              </div>
+              <div id="bottleEntrySubText" class="text-[10px] text-pink-400 truncate">🌈 开心瓶 (${0}条) · 🩹 小问题沟通瓶 (${0}条)</div>
+            </div>
+          </div>
+          <button id="openBottleUiBtn" type="button" class="cute-btn-primary px-3.5 py-2 rounded-2xl text-xs font-extrabold shrink-0 flex items-center gap-1 shadow-sm">
+            <span>✨ 进入消息瓶空间</span>
+            <span>→</span>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -655,6 +673,122 @@
     </div>
 
   </main>
+
+  <!-- 🍾 独立全屏 UI 界面：情侣双色时光消息瓶空间（开心瓶 + 小问题沟通瓶 + 定时封印 & 3次改时机会） -->
+  <div id="bottleSpaceModal" class="fixed inset-0 z-50 bg-gradient-to-br from-rose-50 via-pink-50 to-indigo-50 hidden flex-col overflow-y-auto">
+    <!-- 顶部独立导航栏 -->
+    <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-pink-200 px-4 py-3">
+      <div class="max-w-lg mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🍾</span>
+          <div>
+            <h2 class="text-sm font-extrabold text-pink-700 flex items-center gap-1.5">
+              <span>情侣时光消息瓶空间</span>
+              <span id="bottleUiRoleBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 text-pink-600 font-bold">👧 女生视角投递</span>
+            </h2>
+            <p class="text-[11px] text-pink-400">男生女生都能随时塞纸条 · 到约定时间前双方都不可偷看</p>
+          </div>
+        </div>
+        <button id="closeBottleUiBtn" type="button" class="px-3 py-1.5 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-700 font-extrabold text-xs transition">
+          ← 返回打卡屋
+        </button>
+      </div>
+    </div>
+
+    <!-- 消息瓶主体内容区 -->
+    <div class="max-w-lg mx-auto w-full px-4 py-4 space-y-4 pb-20">
+
+      <!-- ⏰ 定时开启封印控制器（未到时间双方均不可打开 + 每次开启前最多 3 次修改时间机会） -->
+      <div class="cute-card rounded-3xl p-4 bg-gradient-to-r from-indigo-50/90 via-purple-50/90 to-pink-50/90 border-2 border-indigo-200 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <span id="bottleLockIcon" class="text-lg">🔓</span>
+            <h3 class="text-xs font-extrabold text-indigo-900">定时开启封印设置（约定一起打开的时间）</h3>
+          </div>
+          <span id="bottleModifyQuotaBadge" class="text-[10px] px-2.5 py-0.5 rounded-full font-extrabold bg-indigo-100 text-indigo-700">
+            剩余修改机会：3 / 3 次
+          </span>
+        </div>
+
+        <!-- 倒计时状态横幅 -->
+        <div id="bottleLockBanner" class="p-3 rounded-2xl bg-white/90 border border-indigo-100 flex items-center justify-between gap-2">
+          <div>
+            <div id="bottleStatusHeadline" class="text-xs font-extrabold text-emerald-600">🔓 当前未锁瓶，双方可随时打开查看瓶内纸条</div>
+            <div id="bottleCountdownText" class="text-[11px] text-gray-500 mt-0.5">设置未来时间后，在倒计时结束前男生和女生都无法打开瓶子（但可以继续往里面塞新纸条）</div>
+          </div>
+        </div>
+
+        <!-- 时间选择与锁定按钮 -->
+        <div class="flex flex-col sm:flex-row gap-2 pt-1">
+          <input id="bottleUnlockTimeInput" type="datetime-local" class="flex-1 rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-bold text-indigo-900 focus:outline-none" />
+          <button id="saveBottleUnlockTimeBtn" type="button" class="boy-btn-primary px-4 py-2 rounded-xl font-extrabold text-xs shrink-0">
+            ⏰ 设定/修改开启时间
+          </button>
+        </div>
+        <p class="text-[10px] text-indigo-500 leading-relaxed">
+          💡 规则说明：首次设定定时开启时间<strong>不消耗</strong>修改次数；在本次定时到达并成功打开瓶子之前，你们一共有 <strong>3 次修改开启时间的机会</strong>。一旦到达约定时间并打开瓶子后，修改机会自动重置回满额 3 次！
+        </p>
+      </div>
+
+      <!-- 🍾 两个瓶子切换卡片（1号开心瓶 vs 2号小问题沟通瓶） -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- 瓶子 1：开心话瓶 -->
+        <button id="selectHappyBottleBtn" type="button" class="cute-card rounded-3xl p-4 text-left transition relative overflow-hidden ring-2 ring-pink-500 bg-gradient-to-br from-pink-50 via-white to-rose-50">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-3xl">🌸</span>
+            <span id="happyBottleCountBadge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-600">0 张纸条</span>
+          </div>
+          <div class="text-sm font-black text-pink-700">1号 · 开心甜甜瓶</div>
+          <p class="text-[11px] text-pink-400 mt-0.5 leading-snug">装满想对对方说的开心事、夸奖与心动瞬间</p>
+        </button>
+
+        <!-- 瓶子 2：小问题沟通瓶 -->
+        <button id="selectIssueBottleBtn" type="button" class="cute-card rounded-3xl p-4 text-left transition relative overflow-hidden bg-gradient-to-br from-sky-50 via-white to-indigo-50 border-indigo-200">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-3xl">🩹</span>
+            <span id="issueBottleCountBadge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600">0 张纸条</span>
+          </div>
+          <div class="text-sm font-black text-indigo-800">2号 · 小问题坦诚瓶</div>
+          <p class="text-[11px] text-indigo-400 mt-0.5 leading-snug">温柔写下两人目前存在的小问题与改进心愿</p>
+        </button>
+      </div>
+
+      <!-- ✍️ 往当前选中的瓶子里塞入新纸条（男女生都可写，即使瓶子处于定时锁定期也可随时塞入！） -->
+      <div class="cute-card rounded-3xl p-4 space-y-3 border-2 border-pink-200">
+        <div class="flex items-center justify-between">
+          <h3 id="bottleWriteHeading" class="text-xs font-extrabold text-pink-700 flex items-center gap-1.5">
+            <span>✍️</span> <span>往【🌸 1号 · 开心甜甜瓶】里塞一张新纸条</span>
+          </h3>
+          <div class="flex items-center gap-1 bg-pink-50 p-1 rounded-full border border-pink-200 text-[11px] font-bold">
+            <button id="bottleAuthorGirlBtn" type="button" class="px-2.5 py-0.5 rounded-full bg-pink-500 text-white transition">👧 女生写</button>
+            <button id="bottleAuthorBoyBtn" type="button" class="px-2.5 py-0.5 rounded-full text-pink-600 transition">🤵 男生写</button>
+          </div>
+        </div>
+
+        <textarea id="bottleNewMsgInput" rows="3" placeholder="在这里写下你想放进开心瓶里的话（塞入后在未到开启时间前，双方都看不到具体内容哟）..." class="w-full rounded-2xl border-2 border-pink-100 bg-pink-50/30 px-3.5 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-pink-400 transition"></textarea>
+
+        <button id="putIntoBottleBtn" type="button" class="cute-btn-primary w-full py-3 rounded-2xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md">
+          <span>🍾</span> <span id="putIntoBottleBtnText">折成小纸条塞进【开心甜甜瓶】</span>
+        </button>
+      </div>
+
+      <!-- 🔍 打开查看瓶子内容区域（未到设定时间时严格锁定，到时间后点击“开启瓶塞”展开全部纸条） -->
+      <div class="cute-card rounded-3xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 id="bottleViewHeading" class="text-xs font-extrabold text-pink-700 flex items-center gap-1.5">
+            <span>💌</span> <span>查看【🌸 1号 · 开心甜甜瓶】里的纸条</span>
+          </h3>
+          <button id="openBottleCorkBtn" type="button" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs shadow-sm transition">
+            🔓 打开瓶子查看内容
+          </button>
+        </div>
+
+        <!-- 锁瓶遮罩提示 或 瓶内纸条列表 -->
+        <div id="bottleMessagesContainer" class="space-y-2.5 pt-1"></div>
+      </div>
+
+    </div>
+  </div>
 
   <!-- 弹窗 1：微信打卡成绩单弹窗 -->
   <div id="reportModal" class="fixed inset-0 z-50 bg-pink-950/40 backdrop-blur-sm hidden items-center justify-center p-4">
@@ -1173,20 +1307,51 @@
         { id: 'r3', emoji: '🍲', title: '周末大餐', cost: 520 },
         { id: 'r4', emoji: '💄', title: '小惊喜一份', cost: 1314 }
       ],
+      bottles: {
+        unlockAt: 0,
+        modifyLeft: 3,
+        isOpenedForCurrentCycle: false,
+        happyList: [
+          { id: 'bh_1', author: 'boy', authorName: '🤵 男朋友', time: '今日 09:00', text: '看到紫月宝贝每天乖乖打卡，心里超级甜！今天也要开心哟～💖' }
+        ],
+        issueList: [
+          { id: 'bi_1', author: 'boy', authorName: '🤵 男朋友', time: '今日 09:05', text: '以后我们遇到小分歧都不许冷战超过半小时，有什么委屈都可以写进这个瓶子里告诉我～🤝' }
+        ]
+      },
       history: [
-        { time: '昨日 22:15', text: '完成【乖乖按时干饭打卡】【护肤与早睡打卡】，获得 +25 💖' },
-        { time: '昨日 19:30', text: '成功兑换心愿【🧋 秋天的第一杯热奶茶】，消耗 200 💖' }
+        { time: '刚刚', text: '🎀 欢迎来到王紫月小朋友专属打卡屋，快开始第 1 天打卡吧！' }
       ]
     };
 
-    const STORAGE_KEY = 'WANG_ZIYUE_CHECKIN_V6';
+    const STORAGE_KEY = 'WANG_ZIYUE_CHECKIN_V7';
     // 专属云端同步房间号（由你的专属 Token 加密派生，全球唯一）
-    const CLOUD_ROOM_TOPIC = 'wzy_love_sync_room_05d18c23c884_v5';
-    // 通道1：ntfy.sh 全球实时消息流存储（天然支持浏览器 CORS 跨域读写、支持缓存最后一条完整 JSON 状态、国内移动联通电信直连极快！）
+    const CLOUD_ROOM_TOPIC = 'wzy_love_sync_room_05d18c23c884_v7';
+    // 通道1：ntfy.sh 全球实时消息流（主通道）
     const NTFY_SEND_URL = `https://ntfy.sh/${CLOUD_ROOM_TOPIC}`;
-    const NTFY_POLL_URL = `https://ntfy.sh/${CLOUD_ROOM_TOPIC}/json?poll=1&since=48h`;
+    const NTFY_POLL_URL = `https://ntfy.sh/${CLOUD_ROOM_TOPIC}/json?poll=1&since=72h`;
+    // 通道2：备选公共 JSON 云存储镜像（防止单节点偶发波动）
+    const BACKUP_NTFY_URL = `https://ntfy.sh/${CLOUD_ROOM_TOPIC}_bak`;
+    const BACKUP_POLL_URL = `https://ntfy.sh/${CLOUD_ROOM_TOPIC}_bak/json?poll=1&since=72h`;
     let lastLocalModified = 0;
     let isSyncingFromCloud = false;
+
+    function normalizeStateSchema(st) {
+      if (!st || typeof st !== 'object') return JSON.parse(JSON.stringify(DEFAULT_STATE));
+      st.profile = Object.assign({}, DEFAULT_STATE.profile, st.profile || {});
+      if (!st.profile.pushplusToken) st.profile.pushplusToken = DEFAULT_PUSHPLUS_TOKEN;
+      if (!Array.isArray(st.tasks)) st.tasks = JSON.parse(JSON.stringify(DEFAULT_STATE.tasks));
+      if (!Array.isArray(st.rewards)) st.rewards = JSON.parse(JSON.stringify(DEFAULT_STATE.rewards));
+      if (!Array.isArray(st.history)) st.history = [];
+      if (!st.bottles || typeof st.bottles !== 'object') {
+        st.bottles = JSON.parse(JSON.stringify(DEFAULT_STATE.bottles));
+      } else {
+        if (typeof st.bottles.unlockAt !== 'number') st.bottles.unlockAt = 0;
+        if (typeof st.bottles.modifyLeft !== 'number') st.bottles.modifyLeft = 3;
+        if (!Array.isArray(st.bottles.happyList)) st.bottles.happyList = [];
+        if (!Array.isArray(st.bottles.issueList)) st.bottles.issueList = [];
+      }
+      return st;
+    }
 
     function getTodayYMD() {
       const d = new Date();
@@ -1237,19 +1402,17 @@
 
     function loadAppState() {
       const fromUrl = checkUrlConfigImport();
-      if (fromUrl) return fromUrl;
+      if (fromUrl) return normalizeStateSchema(fromUrl);
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.tasks)) {
-            parsed.profile = Object.assign({}, DEFAULT_STATE.profile, parsed.profile || {});
-            if (!parsed.profile.pushplusToken) parsed.profile.pushplusToken = DEFAULT_PUSHPLUS_TOKEN;
-            return checkAndAutoResetDailyTasks(parsed);
+            return normalizeStateSchema(checkAndAutoResetDailyTasks(parsed));
           }
         }
       } catch (e) {}
-      const fresh = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      const fresh = normalizeStateSchema(JSON.parse(JSON.stringify(DEFAULT_STATE)));
       fresh.lastCheckinDate = getTodayYMD();
       fresh.updatedAt = 0;
       return fresh;
@@ -1264,6 +1427,22 @@
         : 'text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700';
     }
 
+    // 生成轻量云端同步包（控制体积在 3.5KB 内，防止超出 ntfy 4KB 单条消息上限被转成附件而丢包！）
+    function buildCompactCloudPayload() {
+      const clone = JSON.parse(JSON.stringify(appState));
+      if (Array.isArray(clone.history) && clone.history.length > 12) {
+        clone.history = clone.history.slice(0, 12);
+      }
+      // 如果自定义上传了超大 Base64 本地图片或本地 MP3，保留链接型数据，避免阻塞实时状态同步流
+      if (clone.profile && clone.profile.customBannerData && clone.profile.customBannerData.startsWith('data:') && clone.profile.customBannerData.length > 1800) {
+        delete clone.profile.customBannerData;
+      }
+      if (clone.profile && clone.profile.bgmCustomUrl && clone.profile.bgmCustomUrl.startsWith('data:') && clone.profile.bgmCustomUrl.length > 1800) {
+        delete clone.profile.bgmCustomUrl;
+      }
+      return btoa(unescape(encodeURIComponent(JSON.stringify(clone))));
+    }
+
     async function pushStateToCloud(showTip = false) {
       try {
         appState.updatedAt = Date.now();
@@ -1271,17 +1450,25 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
         updateSyncBadge('🔄 正在上传云端...', true);
 
-        // 将完整状态通过 UTF-8 Base64 编码后写入 ntfy 云端房间流，避免中文乱码或特殊字符截断
-        const encodedPayload = btoa(unescape(encodeURIComponent(JSON.stringify(appState))));
-        const res = await fetch(NTFY_SEND_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-          body: encodedPayload
-        });
-        if (res.ok) {
+        const encodedPayload = buildCompactCloudPayload();
+        // 双通道并发写入，确保极高送达率
+        const [res1] = await Promise.allSettled([
+          fetch(NTFY_SEND_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            body: encodedPayload
+          }),
+          fetch(BACKUP_NTFY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            body: encodedPayload
+          })
+        ]);
+
+        if (res1.status === 'fulfilled' && res1.value.ok) {
           const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           updateSyncBadge(`☁️ 云端已同步 (${timeStr})`, true);
-          if (showTip) showToast('☁️ 已成功推送到云端！对方手机 4 秒内自动更新～');
+          if (showTip) showToast('☁️ 已成功推送到云端！对方手机打开/刷新即可同步～');
           return true;
         }
       } catch (e) {
@@ -1291,51 +1478,70 @@
       return false;
     }
 
+    async function parseNtfyLines(text) {
+      const lines = text.trim().split('\n').filter(Boolean);
+      let latestRemote = null;
+      let maxRemoteTime = 0;
+
+      for (const line of lines) {
+        try {
+          const evt = JSON.parse(line);
+          if (evt && evt.event === 'message') {
+            let rawMsg = evt.message || '';
+            // 如果消息因体积较大被存为 attachment，自动拉取 attachment 内容
+            if (evt.attachment && evt.attachment.url) {
+              try {
+                const attRes = await fetch(evt.attachment.url);
+                if (attRes.ok) rawMsg = await attRes.text();
+              } catch (eAtt) {}
+            }
+            if (rawMsg) {
+              const decodedStr = decodeURIComponent(escape(atob(rawMsg.trim())));
+              const candidate = JSON.parse(decodedStr);
+              if (candidate && Array.isArray(candidate.tasks)) {
+                const t = Number(candidate.updatedAt || 0);
+                if (t >= maxRemoteTime) {
+                  maxRemoteTime = t;
+                  latestRemote = candidate;
+                }
+              }
+            }
+          }
+        } catch (lineErr) {}
+      }
+      return { latestRemote, maxRemoteTime };
+    }
+
     async function pullStateFromCloud(showTip = false) {
       if (isSyncingFromCloud) return;
       isSyncingFromCloud = true;
       try {
-        const res = await fetch(NTFY_POLL_URL + '&_t=' + Date.now(), { cache: 'no-store' });
-        if (res.ok) {
+        let res = await fetch(NTFY_POLL_URL + '&_t=' + Date.now(), { cache: 'no-store' }).catch(() => null);
+        if (!res || !res.ok) {
+          res = await fetch(BACKUP_POLL_URL + '&_t=' + Date.now(), { cache: 'no-store' }).catch(() => null);
+        }
+        if (res && res.ok) {
           const text = await res.text();
-          const lines = text.trim().split('\n').filter(Boolean);
-          let latestRemote = null;
-          let maxRemoteTime = 0;
-
-          for (const line of lines) {
-            try {
-              const evt = JSON.parse(line);
-              if (evt && evt.event === 'message' && evt.message) {
-                const decodedStr = decodeURIComponent(escape(atob(evt.message.trim())));
-                const candidate = JSON.parse(decodedStr);
-                if (candidate && Array.isArray(candidate.tasks)) {
-                  const t = Number(candidate.updatedAt || 0);
-                  if (t >= maxRemoteTime) {
-                    maxRemoteTime = t;
-                    latestRemote = candidate;
-                  }
-                }
-              }
-            } catch (lineErr) {}
-          }
+          const { latestRemote, maxRemoteTime } = await parseNtfyLines(text);
 
           const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           if (latestRemote) {
             const localTime = Number(appState.updatedAt || 0);
-            if (maxRemoteTime > localTime || showTip) {
-              // 如果云端有更新的数据（比如女朋友刚打完卡，或者你刚改了积分=0），立即覆盖本地并刷新界面！
-              if (maxRemoteTime > localTime) {
-                appState = checkAndAutoResetDailyTasks(latestRemote);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-                renderAll();
-                if (showTip) showToast('✅ 已拉取到最新打卡与积分状态！');
-              } else if (showTip) {
-                showToast('✨ 当前已经是云端最新状态啦！');
-              }
+            // 当云端有更新的时间戳，或用户手动点击了“刷新”按钮时，直接采纳云端最新状态！
+            if (maxRemoteTime > localTime || (showTip && maxRemoteTime > 0 && maxRemoteTime !== localTime)) {
+              const keepCustomBanner = appState.profile && appState.profile.customBannerData;
+              const keepCustomBgm = appState.profile && appState.profile.bgmCustomUrl;
+              appState = normalizeStateSchema(checkAndAutoResetDailyTasks(latestRemote));
+              if (!appState.profile.customBannerData && keepCustomBanner) appState.profile.customBannerData = keepCustomBanner;
+              if (!appState.profile.bgmCustomUrl && keepCustomBgm) appState.profile.bgmCustomUrl = keepCustomBgm;
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+              renderAll();
+              if (showTip) showToast('✅ 已从云端同步最新配置与打卡状态！');
+            } else if (showTip) {
+              showToast('✨ 当前已经是云端最新状态啦！');
             }
             updateSyncBadge(`☁️ 实时互通中 (${timeStr})`, true);
           } else {
-            // 云端房间还是空的，把当前状态初始化推上去
             updateSyncBadge(`☁️ 云端已就绪 (${timeStr})`, true);
           }
         }
@@ -1475,6 +1681,7 @@
       renderHistoryLogs();
       renderBoyfriendDashboard();
       renderCustomizeForm();
+      renderBottlesSystem();
     }
 
     function renderMoodSelector() {
@@ -1851,6 +2058,250 @@
       document.getElementById('taskFormHeading').textContent = '➕ 新增 / 编辑打卡项目与选项';
       document.getElementById('cancelEditTaskBtn').classList.add('hidden');
       renderDraftOptionTags();
+    }
+
+    // --- 🍾 情侣双色时光消息瓶系统（1号开心瓶 + 2号小问题沟通瓶 + 定时封印 + 3次改时机会） ---
+    let activeBottleType = 'happy'; // 'happy' | 'issue'
+    let activeBottleAuthor = 'girl'; // 'girl' | 'boy'
+    let isBottleViewExpanded = false; // 是否已点开瓶塞查看内容
+
+    function formatUnlockDateTime(ts) {
+      if (!ts || ts <= 0) return '未设置定时（随时可打开）';
+      const d = new Date(ts);
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${d.getFullYear()}-${m}-${day} ${hh}:${mm}`;
+    }
+
+    function toDatetimeLocalValue(ts) {
+      const d = ts && ts > 0 ? new Date(ts) : new Date(Date.now() + 3600 * 1000);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${y}-${m}-${day}T${hh}:${mm}`;
+    }
+
+    function isBottleCurrentlyLocked() {
+      if (!appState.bottles) return false;
+      const unlockAt = Number(appState.bottles.unlockAt || 0);
+      return unlockAt > Date.now();
+    }
+
+    function formatRemainingCountdown(unlockAt) {
+      const diff = Math.max(0, unlockAt - Date.now());
+      const totalSec = Math.floor(diff / 1000);
+      const days = Math.floor(totalSec / 86400);
+      const hours = Math.floor((totalSec % 86400) / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+      if (days > 0) return `${days}天 ${hours}小时 ${mins}分 ${secs}秒`;
+      if (hours > 0) return `${hours}小时 ${mins}分 ${secs}秒`;
+      return `${mins}分 ${secs}秒`;
+    }
+
+    function renderBottlesSystem() {
+      if (!appState.bottles) {
+        appState.bottles = JSON.parse(JSON.stringify(DEFAULT_STATE.bottles));
+      }
+      const b = appState.bottles;
+      const happyCount = (b.happyList && b.happyList.length) || 0;
+      const issueCount = (b.issueList && b.issueList.length) || 0;
+      const locked = isBottleCurrentlyLocked();
+
+      // 如果正在锁瓶期间，强制收起瓶子内容，双方都不可偷看！
+      if (locked) {
+        isBottleViewExpanded = false;
+      }
+
+      // 1. 更新主页面横幅下方的入口状态
+      const entryTag = document.getElementById('bottleEntryStatusTag');
+      const entrySub = document.getElementById('bottleEntrySubText');
+      if (entryTag) {
+        if (locked) {
+          entryTag.textContent = `🔒 定时封印中 (剩${formatRemainingCountdown(b.unlockAt)})`;
+          entryTag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 font-bold';
+        } else {
+          entryTag.textContent = '🔓 已到时间 · 可开启查看';
+          entryTag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold';
+        }
+      }
+      if (entrySub) {
+        entrySub.textContent = `🌸 开心瓶 (${happyCount}条) · 🩹 小问题坦诚瓶 (${issueCount}条)`;
+      }
+
+      // 2. 更新消息瓶独立空间顶部与封印控制器
+      const roleBadge = document.getElementById('bottleUiRoleBadge');
+      if (roleBadge) {
+        roleBadge.textContent = activeBottleAuthor === 'boy' ? '🤵 男生投递署名' : '👧 女生投递署名';
+        roleBadge.className = activeBottleAuthor === 'boy'
+          ? 'text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold'
+          : 'text-[10px] px-2 py-0.5 rounded-full bg-pink-100 text-pink-600 font-bold';
+      }
+
+      const lockIcon = document.getElementById('bottleLockIcon');
+      const quotaBadge = document.getElementById('bottleModifyQuotaBadge');
+      const headline = document.getElementById('bottleStatusHeadline');
+      const countdownEl = document.getElementById('bottleCountdownText');
+
+      if (lockIcon) lockIcon.textContent = locked ? '🔒' : '🔓';
+      if (quotaBadge) {
+        const left = typeof b.modifyLeft === 'number' ? b.modifyLeft : 3;
+        quotaBadge.textContent = `本次开启前剩余修改机会：${left} / 3 次`;
+        quotaBadge.className = left > 0
+          ? 'text-[10px] px-2.5 py-0.5 rounded-full font-extrabold bg-indigo-100 text-indigo-700'
+          : 'text-[10px] px-2.5 py-0.5 rounded-full font-extrabold bg-rose-100 text-rose-600';
+      }
+
+      if (headline && countdownEl) {
+        if (locked) {
+          headline.textContent = `🔒 瓶子已定时封印！开启时间：${formatUnlockDateTime(b.unlockAt)}`;
+          headline.className = 'text-xs font-extrabold text-rose-600';
+          countdownEl.textContent = `⏳ 距离可打开还剩：${formatRemainingCountdown(b.unlockAt)}（倒计时结束前双方均不可查看，但可继续塞纸条）`;
+        } else if (b.unlockAt > 0) {
+          headline.textContent = `🎉 已到达约定时间（${formatUnlockDateTime(b.unlockAt)}），双方现在可以打开瓶子啦！`;
+          headline.className = 'text-xs font-extrabold text-emerald-600';
+          countdownEl.textContent = '点击下方【🔓 打开瓶子查看内容】即可一起阅读瓶内纸条（打开后修改次数将重置为 3 次）';
+        } else {
+          headline.textContent = '🔓 当前未设置定时锁，双方可随时打开查看瓶内纸条';
+          headline.className = 'text-xs font-extrabold text-emerald-600';
+          countdownEl.textContent = '如果想约定某个时刻（比如周末见面或今晚 22:00）再一起看，请在下方指定开启时间';
+        }
+      }
+
+      // 3. 更新两个瓶子卡片选中高亮与纸条数量
+      const happyBtn = document.getElementById('selectHappyBottleBtn');
+      const issueBtn = document.getElementById('selectIssueBottleBtn');
+      const happyBadge = document.getElementById('happyBottleCountBadge');
+      const issueBadge = document.getElementById('issueBottleCountBadge');
+      if (happyBadge) happyBadge.textContent = `${happyCount} 张纸条`;
+      if (issueBadge) issueBadge.textContent = `${issueCount} 张纸条`;
+
+      if (happyBtn && issueBtn) {
+        if (activeBottleType === 'happy') {
+          happyBtn.className = 'cute-card rounded-3xl p-4 text-left transition relative overflow-hidden ring-2 ring-pink-500 bg-gradient-to-br from-pink-50 via-white to-rose-50 scale-[1.01]';
+          issueBtn.className = 'cute-card rounded-3xl p-4 text-left transition relative overflow-hidden opacity-85 bg-gradient-to-br from-sky-50/60 via-white to-indigo-50/60 border-indigo-100';
+        } else {
+          issueBtn.className = 'cute-card rounded-3xl p-4 text-left transition relative overflow-hidden ring-2 ring-indigo-500 bg-gradient-to-br from-sky-50 via-white to-indigo-50 scale-[1.01]';
+          happyBtn.className = 'cute-card rounded-3xl p-4 text-left transition relative overflow-hidden opacity-85 bg-gradient-to-br from-pink-50/60 via-white to-rose-50/60';
+        }
+      }
+
+      // 4. 更新投递表单标题与署名按钮
+      const writeHeading = document.getElementById('bottleWriteHeading');
+      const msgInput = document.getElementById('bottleNewMsgInput');
+      const putBtnText = document.getElementById('putIntoBottleBtnText');
+      const viewHeading = document.getElementById('bottleViewHeading');
+      const girlAuthorBtn = document.getElementById('bottleAuthorGirlBtn');
+      const boyAuthorBtn = document.getElementById('bottleAuthorBoyBtn');
+
+      if (girlAuthorBtn && boyAuthorBtn) {
+        if (activeBottleAuthor === 'girl') {
+          girlAuthorBtn.className = 'px-2.5 py-0.5 rounded-full bg-pink-500 text-white transition';
+          boyAuthorBtn.className = 'px-2.5 py-0.5 rounded-full text-pink-600 transition';
+        } else {
+          boyAuthorBtn.className = 'px-2.5 py-0.5 rounded-full bg-indigo-500 text-white transition';
+          girlAuthorBtn.className = 'px-2.5 py-0.5 rounded-full text-pink-600 transition';
+        }
+      }
+
+      if (activeBottleType === 'happy') {
+        if (writeHeading) writeHeading.innerHTML = '<span>✍️</span> <span>往【🌸 1号 · 开心甜甜瓶】里塞一张新纸条</span>';
+        if (msgInput) msgInput.placeholder = '写下想对对方说的开心事、表扬或甜蜜瞬间（男生女生都可以写哟）...';
+        if (putBtnText) putBtnText.textContent = '折成甜心纸条塞进【1号·开心甜甜瓶】';
+        if (viewHeading) viewHeading.innerHTML = '<span>💌</span> <span>【🌸 1号 · 开心甜甜瓶】里的纸条</span>';
+      } else {
+        if (writeHeading) writeHeading.innerHTML = '<span>✍️</span> <span>往【🩹 2号 · 小问题坦诚瓶】里塞一张新纸条</span>';
+        if (msgInput) msgInput.placeholder = '温柔写下最近两人相处中的小问题、小委屈或希望一起改进的地方...';
+        if (putBtnText) putBtnText.textContent = '折成坦诚纸条塞进【2号·小问题坦诚瓶】';
+        if (viewHeading) viewHeading.innerHTML = '<span>🤝</span> <span>【🩹 2号 · 小问题坦诚瓶】里的纸条</span>';
+      }
+
+      // 5. 渲染瓶内内容或定时封印锁屏
+      const openCorkBtn = document.getElementById('openBottleCorkBtn');
+      const msgContainer = document.getElementById('bottleMessagesContainer');
+      if (!msgContainer) return;
+      msgContainer.innerHTML = '';
+
+      if (locked) {
+        if (openCorkBtn) {
+          openCorkBtn.textContent = '🔒 定时封印中（不可打开）';
+          openCorkBtn.className = 'px-3 py-1.5 rounded-xl bg-gray-200 text-gray-500 font-extrabold text-xs cursor-not-allowed';
+        }
+        msgContainer.innerHTML = `
+          <div class="p-6 rounded-2xl bg-gradient-to-br from-rose-50/80 to-indigo-50/80 border border-dashed border-rose-300 text-center space-y-2">
+            <div class="text-3xl">🔒🍾</div>
+            <div class="text-xs font-extrabold text-rose-700">还没到约定开启时间，双方都不能偷看哟！</div>
+            <p class="text-[11px] text-gray-500">
+              约定开启时间：<strong>${formatUnlockDateTime(b.unlockAt)}</strong><br/>
+              当前开心瓶已有 <strong>${happyCount}</strong> 张纸条，小问题瓶已有 <strong>${issueCount}</strong> 张纸条。<br/>
+              在开启之前，你们还有 <strong>${b.modifyLeft} 次</strong> 修改开启时间的机会。
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      if (!isBottleViewExpanded) {
+        if (openCorkBtn) {
+          openCorkBtn.textContent = '🔓 拔开瓶塞查看内容';
+          openCorkBtn.className = 'px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs shadow-sm transition animate-pulse';
+        }
+        msgContainer.innerHTML = `
+          <div class="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 text-center space-y-2">
+            <div class="text-2xl">✨🍾✨</div>
+            <div class="text-xs font-extrabold text-emerald-800">瓶子当前处于可开启状态！</div>
+            <p class="text-[11px] text-emerald-600">点击右上角绿色按钮<strong>「🔓 拔开瓶塞查看内容」</strong>，即可一起拆阅瓶子里的所有心里话～</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (openCorkBtn) {
+        openCorkBtn.textContent = '🙈 合上瓶塞隐藏内容';
+        openCorkBtn.className = 'px-3 py-1.5 rounded-xl bg-pink-100 hover:bg-pink-200 text-pink-700 font-extrabold text-xs transition';
+      }
+
+      const list = activeBottleType === 'happy' ? (b.happyList || []) : (b.issueList || []);
+      if (list.length === 0) {
+        msgContainer.innerHTML = `<div class="text-center py-6 text-xs text-gray-400">这个瓶子里还没有纸条哟，快在上面写第一张塞进来吧～</div>`;
+        return;
+      }
+
+      list.forEach(item => {
+        const isBoy = item.author === 'boy';
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-2xl border ${
+          isBoy ? 'bg-indigo-50/70 border-indigo-200' : 'bg-pink-50/70 border-pink-200'
+        } space-y-1.5`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="font-extrabold ${isBoy ? 'text-indigo-700' : 'text-pink-700'}">${item.authorName || (isBoy ? '🤵 男朋友' : '👧 王紫月')}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-gray-400">${item.time || ''}</span>
+              <button type="button" data-del-bottle-id="${item.id}" class="text-rose-400 hover:text-rose-600 font-bold">删除</button>
+            </div>
+          </div>
+          <p class="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">${item.text}</p>
+        `;
+        const delBtn = card.querySelector('[data-del-bottle-id]');
+        if (delBtn) {
+          delBtn.addEventListener('click', () => {
+            if (activeBottleType === 'happy') {
+              appState.bottles.happyList = appState.bottles.happyList.filter(x => x.id !== item.id);
+            } else {
+              appState.bottles.issueList = appState.bottles.issueList.filter(x => x.id !== item.id);
+            }
+            saveAppState();
+            renderAll();
+            showToast('🗑️ 已从瓶中取出并删除该纸条');
+          });
+        }
+        msgContainer.appendChild(card);
+      });
     }
 
     // --- 事件绑定 ---
@@ -2357,6 +2808,181 @@
           }
         });
       }
+
+      // --- 🍾 绑定情侣时光消息瓶独立 UI 事件 ---
+      const bottleModal = document.getElementById('bottleSpaceModal');
+      const openBottleBtn = document.getElementById('openBottleUiBtn');
+      const closeBottleBtn = document.getElementById('closeBottleUiBtn');
+
+      if (openBottleBtn && bottleModal) {
+        openBottleBtn.addEventListener('click', () => {
+          playCuteSound('pop');
+          // 根据当前所处是男生版还是女生版，自动预设默认投递人署名
+          activeBottleAuthor = currentRole === 'boy' ? 'boy' : 'girl';
+          const unlockInp = document.getElementById('bottleUnlockTimeInput');
+          if (unlockInp) {
+            unlockInp.value = toDatetimeLocalValue(appState.bottles && appState.bottles.unlockAt);
+          }
+          renderBottlesSystem();
+          bottleModal.classList.remove('hidden');
+          bottleModal.classList.add('flex');
+        });
+      }
+
+      if (closeBottleBtn && bottleModal) {
+        closeBottleBtn.addEventListener('click', () => {
+          playCuteSound('pop');
+          bottleModal.classList.add('hidden');
+          bottleModal.classList.remove('flex');
+        });
+      }
+
+      // 切换 1号开心瓶 vs 2号小问题坦诚瓶
+      document.getElementById('selectHappyBottleBtn').addEventListener('click', () => {
+        activeBottleType = 'happy';
+        playCuteSound('pop');
+        renderBottlesSystem();
+      });
+      document.getElementById('selectIssueBottleBtn').addEventListener('click', () => {
+        activeBottleType = 'issue';
+        playCuteSound('pop');
+        renderBottlesSystem();
+      });
+
+      // 切换纸条投递人（女生写 / 男生写）
+      document.getElementById('bottleAuthorGirlBtn').addEventListener('click', () => {
+        activeBottleAuthor = 'girl';
+        playCuteSound('pop');
+        renderBottlesSystem();
+      });
+      document.getElementById('bottleAuthorBoyBtn').addEventListener('click', () => {
+        activeBottleAuthor = 'boy';
+        playCuteSound('pop');
+        renderBottlesSystem();
+      });
+
+      // 往瓶子里塞纸条
+      document.getElementById('putIntoBottleBtn').addEventListener('click', (e) => {
+        const inp = document.getElementById('bottleNewMsgInput');
+        const text = inp.value.trim();
+        if (!text) return showToast('请先写下你想放进瓶子里的话哟～');
+
+        if (!appState.bottles) appState.bottles = JSON.parse(JSON.stringify(DEFAULT_STATE.bottles));
+        const nowStr = new Date().toLocaleTimeString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const authorName = activeBottleAuthor === 'boy' ? '🤵 男朋友' : '👧 王紫月';
+        const bottleLabel = activeBottleType === 'happy' ? '🌸 1号·开心甜甜瓶' : '🩹 2号·小问题坦诚瓶';
+
+        const newItem = {
+          id: 'bm_' + Date.now(),
+          author: activeBottleAuthor,
+          authorName,
+          time: nowStr,
+          text
+        };
+
+        if (activeBottleType === 'happy') {
+          appState.bottles.happyList.unshift(newItem);
+        } else {
+          appState.bottles.issueList.unshift(newItem);
+        }
+
+        inp.value = '';
+        playCuteSound('reward');
+        spawnFloatingHearts(e.clientX, e.clientY);
+        saveAppState();
+        renderAll();
+
+        const locked = isBottleCurrentlyLocked();
+        if (locked) {
+          showToast(`🍾 已塞入【${bottleLabel}】！到开启时间前内容严格保密～`);
+          sendWeChatPush(
+            `🍾 ${authorName}往【${bottleLabel}】塞了一张新纸条！`,
+            `瓶子当前处于定时封印状态（开启时间：<b>${formatUnlockDateTime(appState.bottles.unlockAt)}</b>），等到约定时间一起打开查看吧！`
+          );
+        } else {
+          showToast(`🍾 已塞入【${bottleLabel}】并同步到云端！`);
+          sendWeChatPush(
+            `🍾 ${authorName}往【${bottleLabel}】塞了一张新纸条！`,
+            `纸条已放入瓶中，快打开打卡屋的【消息瓶空间】查看吧！`
+          );
+        }
+      });
+
+      // ⏰ 设定或修改定时开启时间（在一次成功打开之前最多允许修改 3 次！）
+      document.getElementById('saveBottleUnlockTimeBtn').addEventListener('click', () => {
+        const inp = document.getElementById('bottleUnlockTimeInput');
+        if (!inp || !inp.value) return showToast('请先选择一个开启日期和时间～');
+        const targetTs = new Date(inp.value).getTime();
+        if (Number.isNaN(targetTs) || targetTs <= Date.now()) {
+          return showToast('⚠️ 请选择一个未来的时间作为开启时间！');
+        }
+
+        if (!appState.bottles) appState.bottles = JSON.parse(JSON.stringify(DEFAULT_STATE.bottles));
+        const b = appState.bottles;
+        const alreadyHasPendingLock = b.unlockAt && b.unlockAt > 0 && !b.isOpenedForCurrentCycle;
+
+        if (alreadyHasPendingLock) {
+          if (b.modifyLeft <= 0) {
+            return showToast('🚫 本次开启前的 3 次修改时间机会已用完，不能再改时间啦！');
+          }
+          b.modifyLeft -= 1;
+          b.unlockAt = targetTs;
+          isBottleViewExpanded = false;
+          playCuteSound('pop');
+          saveAppState();
+          renderAll();
+          showToast(`⏰ 已修改开启时间！本次开启前还剩 ${b.modifyLeft} 次修改机会`);
+          sendWeChatPush(
+            '⏰ 消息瓶开启时间已修改',
+            `新的开启时间：<b>${formatUnlockDateTime(targetTs)}</b><br/>本次开启前剩余修改机会：<b>${b.modifyLeft} / 3 次</b>`
+          );
+        } else {
+          // 首次为新一轮设定开启时间：重置 3 次修改机会
+          b.unlockAt = targetTs;
+          b.modifyLeft = 3;
+          b.isOpenedForCurrentCycle = false;
+          isBottleViewExpanded = false;
+          playCuteSound('reward');
+          saveAppState();
+          renderAll();
+          showToast(`🔒 已锁定消息瓶！将于 ${formatUnlockDateTime(targetTs)} 开启（拥有 3 次修改时间机会）`);
+          sendWeChatPush(
+            '🔒 情侣消息瓶已设定定时开启时间',
+            `约定开启时间：<b>${formatUnlockDateTime(targetTs)}</b><br/>在此时间之前双方均不可打开查看（拥有 3 次修改时间机会）`
+          );
+        }
+      });
+
+      // 🔓 拔开瓶塞查看内容按钮（未到时间严禁打开；到时间打开后重置 3 次修改机会）
+      document.getElementById('openBottleCorkBtn').addEventListener('click', (e) => {
+        if (isBottleCurrentlyLocked()) {
+          playCuteSound('pop');
+          return showToast(`🔒 还没到约定开启时间（${formatUnlockDateTime(appState.bottles.unlockAt)}），双方都不能偷看哟！`);
+        }
+        isBottleViewExpanded = !isBottleViewExpanded;
+        if (isBottleViewExpanded) {
+          playCuteSound('reward');
+          spawnFloatingHearts(e.clientX, e.clientY);
+          // 一旦成功到达时间并打开瓶子，本轮封印完成，重置满额 3 次修改机会！
+          if (appState.bottles && appState.bottles.unlockAt > 0) {
+            appState.bottles.isOpenedForCurrentCycle = true;
+            appState.bottles.unlockAt = 0;
+            appState.bottles.modifyLeft = 3;
+            saveAppState();
+          }
+          showToast('🔓 已拔开瓶塞！快看看对方写了什么心里话吧～');
+        } else {
+          playCuteSound('pop');
+        }
+        renderBottlesSystem();
+      });
+
+      // 每秒刷新一次消息瓶倒计时显示，倒计时归零瞬间自动解锁！
+      setInterval(() => {
+        if (appState.bottles && appState.bottles.unlockAt > 0) {
+          renderBottlesSystem();
+        }
+      }, 1000);
 
       setRoleMode(currentRole);
       // 顶部一键刷新按钮 & 苹果主屏幕下拉刷新逻辑（兼顾云端数据拉取 + 最新 GitHub 网页版本刷新）
