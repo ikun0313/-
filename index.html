@@ -1332,8 +1332,14 @@
     // 通道2：备选公共 JSON 云存储镜像（防止单节点偶发波动）
     const BACKUP_NTFY_URL = `https://ntfy.sh/${CLOUD_ROOM_TOPIC}_bak`;
     const BACKUP_POLL_URL = `https://ntfy.sh/${CLOUD_ROOM_TOPIC}_bak/json?poll=1&since=72h`;
+    // 通道3：📸 专为情侣自定义照片打造的「分片云同步通道」（彻底解决相册上传照片超过 4KB 被拦截、无法同步到女友手机的问题！）
+    const IMG_CLOUD_TOPIC = 'wzy_love_img_05d18c23c884_v7';
+    const IMG_NTFY_SEND_URL = `https://ntfy.sh/${IMG_CLOUD_TOPIC}`;
+    const IMG_NTFY_POLL_URL = `https://ntfy.sh/${IMG_CLOUD_TOPIC}/json?poll=1&since=168h`;
+    const LOCAL_BANNER_CACHE_KEY = 'WANG_ZIYUE_CUSTOM_BANNER_CACHE';
     let lastLocalModified = 0;
     let isSyncingFromCloud = false;
+    let lastSyncedBannerHash = '';
 
     function normalizeStateSchema(st) {
       if (!st || typeof st !== 'object') return JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -1427,15 +1433,149 @@
         : 'text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700';
     }
 
-    // 生成轻量云端同步包（控制体积在 3.5KB 内，防止超出 ntfy 4KB 单条消息上限被转成附件而丢包！）
+    function computeSimpleHash(str) {
+      if (!str) return '';
+      let h = 0;
+      for (let i = 0; i < str.length; i++) {
+        h = ((h << 5) - h) + str.charCodeAt(i);
+        h |= 0;
+      }
+      return 'img_' + Math.abs(h) + '_' + str.length;
+    }
+
+    // 📸 将相册上传的自定义照片切片上传到专属图片云通道（每片 2800 字节，100% 穿透 ntfy 4KB 限制，无需任何图床！）
+    async function pushCustomBannerToCloud(dataUrl) {
+      if (!dataUrl) return;
+      try {
+        const imgHash = computeSimpleHash(dataUrl);
+        appState.profile.customBannerHash = imgHash;
+        lastSyncedBannerHash = imgHash;
+        try { localStorage.setItem(LOCAL_BANNER_CACHE_KEY, JSON.stringify({ hash: imgHash, data: dataUrl })); } catch (e) {}
+
+        // 如果是外部 http 链接或很短的数据，直接随主状态同步即可
+        if (!dataUrl.startsWith('data:') || dataUrl.length <= 2400) {
+          await pushStateToCloud(false);
+          return;
+        }
+
+        updateSyncBadge('📸 正在同步照片到云端...', true);
+        const chunkSize = 2600;
+        const totalChunks = Math.ceil(dataUrl.length / chunkSize);
+        const ts = Date.now();
+
+        for (let idx = 0; idx < totalChunks; idx++) {
+          const part = dataUrl.slice(idx * chunkSize, (idx + 1) * chunkSize);
+          const packet = JSON.stringify({
+            h: imgHash,
+            t: ts,
+            i: idx,
+            n: totalChunks,
+            d: part
+          });
+          await fetch(IMG_NTFY_SEND_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            body: packet
+          });
+        }
+        // 照片分片全部上传完毕后，立即推送一次主状态（带上最新的 customBannerHash 通知女友手机拉取）
+        await pushStateToCloud(false);
+        updateSyncBadge('☁️ 照片与配置已同步！', true);
+        showToast('📸 专属照片已100%同步到云端！女朋友手机刷新即可看到～');
+      } catch (e) {
+        showToast('⚠️ 照片上传云端受阻，建议检查网络或使用图片链接');
+      }
+    }
+
+    // 📸 从专属图片云通道拉取并重组男友上传的自定义照片
+    async function pullCustomBannerFromCloud(expectedHash) {
+      try {
+        // 先检查本地是否已经缓存过这张照片
+        const cachedRaw = localStorage.getItem(LOCAL_BANNER_CACHE_KEY);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (cached && cached.hash && cached.data && (!expectedHash || cached.hash === expectedHash)) {
+            appState.profile.customBannerData = cached.data;
+            lastSyncedBannerHash = cached.hash;
+            applyThemeAndBanner();
+            return true;
+          }
+        }
+
+        const res = await fetch(IMG_NTFY_POLL_URL + '&_t=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) return false;
+        const text = await res.text();
+        const lines = text.trim().split('\n').filter(Boolean);
+
+        // 按 hash 聚合所有分片，找出最新的一组完整照片分片
+        const groups = {};
+        for (const line of lines) {
+          try {
+            const evt = JSON.parse(line);
+            if (evt && evt.event === 'message' && evt.message) {
+              const pkt = JSON.parse(evt.message);
+              if (pkt && pkt.h && typeof pkt.i === 'number' && typeof pkt.n === 'number') {
+                if (!groups[pkt.h] || pkt.t > groups[pkt.h].ts) {
+                  groups[pkt.h] = groups[pkt.h] || { ts: pkt.t, total: pkt.n, parts: {} };
+                  groups[pkt.h].ts = Math.max(groups[pkt.h].ts, pkt.t);
+                }
+                groups[pkt.h].parts[pkt.i] = pkt.d;
+              }
+            }
+          } catch (errLine) {}
+        }
+
+        // 优先匹配 expectedHash，否则取时间戳最新且分片齐全的照片
+        let targetHash = expectedHash && groups[expectedHash] ? expectedHash : null;
+        if (!targetHash) {
+          let maxTs = 0;
+          for (const hKey of Object.keys(groups)) {
+            const g = groups[hKey];
+            if (Object.keys(g.parts).length === g.total && g.ts >= maxTs) {
+              maxTs = g.ts;
+              targetHash = hKey;
+            }
+          }
+        }
+
+        if (targetHash && groups[targetHash]) {
+          const g = groups[targetHash];
+          if (Object.keys(g.parts).length === g.total) {
+            let fullDataUrl = '';
+            for (let i = 0; i < g.total; i++) {
+              fullDataUrl += (g.parts[i] || '');
+            }
+            if (fullDataUrl.startsWith('data:image')) {
+              appState.profile.customBannerData = fullDataUrl;
+              appState.profile.customBannerHash = targetHash;
+              lastSyncedBannerHash = targetHash;
+              try {
+                localStorage.setItem(LOCAL_BANNER_CACHE_KEY, JSON.stringify({ hash: targetHash, data: fullDataUrl }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+              } catch (e) {}
+              applyThemeAndBanner();
+              return true;
+            }
+          }
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    // 生成轻量云端同步包（控制体积在 3.5KB 内，同时携带 customBannerHash 触发对方手机自动拉取分片大图！）
     function buildCompactCloudPayload() {
       const clone = JSON.parse(JSON.stringify(appState));
       if (Array.isArray(clone.history) && clone.history.length > 12) {
         clone.history = clone.history.slice(0, 12);
       }
-      // 如果自定义上传了超大 Base64 本地图片或本地 MP3，保留链接型数据，避免阻塞实时状态同步流
-      if (clone.profile && clone.profile.customBannerData && clone.profile.customBannerData.startsWith('data:') && clone.profile.customBannerData.length > 1800) {
-        delete clone.profile.customBannerData;
+      if (clone.profile && clone.profile.customBannerData) {
+        clone.profile.customBannerHash = computeSimpleHash(clone.profile.customBannerData);
+        // 超过 2400 字节的 Base64 照片走上面的分片图片云通道，主状态包只传 Hash 指纹
+        if (clone.profile.customBannerData.startsWith('data:') && clone.profile.customBannerData.length > 2400) {
+          delete clone.profile.customBannerData;
+        }
+      } else if (clone.profile) {
+        clone.profile.customBannerHash = '';
       }
       if (clone.profile && clone.profile.bgmCustomUrl && clone.profile.bgmCustomUrl.startsWith('data:') && clone.profile.bgmCustomUrl.length > 1800) {
         delete clone.profile.bgmCustomUrl;
@@ -1531,14 +1671,36 @@
             if (maxRemoteTime > localTime || (showTip && maxRemoteTime > 0 && maxRemoteTime !== localTime)) {
               const keepCustomBanner = appState.profile && appState.profile.customBannerData;
               const keepCustomBgm = appState.profile && appState.profile.bgmCustomUrl;
+              const remoteBannerHash = (latestRemote.profile && latestRemote.profile.customBannerHash) || '';
               appState = normalizeStateSchema(checkAndAutoResetDailyTasks(latestRemote));
-              if (!appState.profile.customBannerData && keepCustomBanner) appState.profile.customBannerData = keepCustomBanner;
+
+              if (remoteBannerHash) {
+                if (keepCustomBanner && computeSimpleHash(keepCustomBanner) === remoteBannerHash) {
+                  appState.profile.customBannerData = keepCustomBanner;
+                } else {
+                  // 发现男朋友上传了新的自定义照片分片，立即从图片云通道拉取重组！
+                  await pullCustomBannerFromCloud(remoteBannerHash);
+                }
+              } else {
+                // 男朋友切回了预设插画，清空本地自定义照片缓存
+                appState.profile.customBannerData = '';
+                try { localStorage.removeItem(LOCAL_BANNER_CACHE_KEY); } catch (e) {}
+              }
+
               if (!appState.profile.bgmCustomUrl && keepCustomBgm) appState.profile.bgmCustomUrl = keepCustomBgm;
               localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
               renderAll();
               if (showTip) showToast('✅ 已从云端同步最新配置与打卡状态！');
-            } else if (showTip) {
-              showToast('✨ 当前已经是云端最新状态啦！');
+            } else {
+              const remoteBannerHash = (latestRemote.profile && latestRemote.profile.customBannerHash) || '';
+              const currentLocalHash = computeSimpleHash(appState.profile && appState.profile.customBannerData);
+              if (remoteBannerHash && remoteBannerHash !== currentLocalHash) {
+                await pullCustomBannerFromCloud(remoteBannerHash);
+                renderAll();
+              }
+              if (showTip) {
+                showToast('✨ 当前已经是云端最新状态啦！');
+              }
             }
             updateSyncBadge(`☁️ 实时互通中 (${timeStr})`, true);
           } else {
@@ -2499,19 +2661,20 @@
         });
       });
 
-      // 📸 从手机相册上传情侣照/自定义背景图（自动 Canvas 压缩至高清小体积以便云端同步！）
+      // 📸 从手机相册上传情侣照/自定义背景图（自动修正比例 + 分片上传到专属图片云通道，100% 同步到女友手机！）
       const uploadBannerInput = document.getElementById('uploadCustomBannerInput');
       if (uploadBannerInput) {
         uploadBannerInput.addEventListener('change', (e) => {
           const file = e.target.files && e.target.files[0];
           if (!file) return;
+          showToast('⏳ 正在处理并上传你们的专属照片...');
           const reader = new FileReader();
           reader.onload = (ev) => {
             const img = new Image();
-            img.onload = () => {
+            img.onload = async () => {
               const canvas = document.createElement('canvas');
-              const maxW = 900;
-              const maxH = 540;
+              const maxW = 680;
+              const maxH = 400;
               let w = img.width;
               let h = img.height;
               if (w > maxW) { h = Math.round(h * (maxW / w)); w = maxW; }
@@ -2520,12 +2683,12 @@
               canvas.height = h;
               const ctx = canvas.getContext('2d');
               ctx.drawImage(img, 0, 0, w, h);
-              const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+              const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.72);
               appState.profile.customBannerData = compressedDataUrl;
+              appState.profile.customBannerHash = computeSimpleHash(compressedDataUrl);
               playCuteSound('reward');
               applyThemeAndBanner();
-              saveAppState();
-              showToast('📸 专属照片已换上并同步到云端！');
+              await pushCustomBannerToCloud(compressedDataUrl);
             };
             img.src = ev.target.result;
           };
@@ -2779,8 +2942,12 @@
       }
       const forcePushBtn = document.getElementById('forceCloudPushBtn');
       if (forcePushBtn) {
-        forcePushBtn.addEventListener('click', () => {
-          pushStateToCloud(true);
+        forcePushBtn.addEventListener('click', async () => {
+          if (appState.profile && appState.profile.customBannerData && appState.profile.customBannerData.startsWith('data:')) {
+            await pushCustomBannerToCloud(appState.profile.customBannerData);
+          } else {
+            await pushStateToCloud(true);
+          }
         });
       }
       const copyShareUrlBtn = document.getElementById('copyShareSyncUrlBtn');
